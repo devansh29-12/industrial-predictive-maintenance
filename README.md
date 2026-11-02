@@ -1,137 +1,120 @@
-# Industrial Predictive Maintenance using Machine Learning
+# Industrial Predictive Maintenance Using Machine Learning
 
-An end-to-end Machine Learning project that predicts machine failures using operating conditions and sensor measurements. The project uses the AI4I 2020 Predictive Maintenance dataset and a tuned XGBoost classifier, with a Streamlit application for interactive predictions.
+An end-to-end machine learning project that predicts potential industrial machine failures using sensor data from the AI4I 2020 Predictive Maintenance Dataset. The project compares multiple ML algorithms, handles class imbalance, optimizes the decision threshold, and uses SHAP for model explainability.
 
 ## Project Overview
 
-Unexpected machine failures can lead to production downtime, maintenance costs and operational inefficiencies.
+Unexpected machine failures can cause production downtime, financial losses, and maintenance costs.
 
-This project explores how machine learning can identify potential machine failures based on operating parameters such as air temperature, process temperature, rotational speed, torque and tool wear.
+This project aims to predict whether an industrial machine is likely to fail based on its operating conditions and sensor measurements.
 
-The objective is to build an end-to-end ML pipeline covering data preprocessing, exploratory data analysis, model comparison, class imbalance handling, hyperparameter tuning, threshold optimization, model explainability and deployment.
+The final model uses **XGBoost** and is deployed through a **Streamlit web application**.
 
 ## Dataset
 
 **Dataset:** AI4I 2020 Predictive Maintenance Dataset
 
-**Source:** UCI Machine Learning Repository
+**Source:** [UCI Machine Learning Repository](https://archive.ics.uci.edu/dataset/601/ai4i+2020+predictive+maintenance+dataset)
 
 - Total records: 10,000
-- Original features: 14 columns
+- Original features: 14
 - Target variable: `Machine failure`
 - Failure cases: 339 (3.39%)
 - Non-failure cases: 9,661 (96.61%)
 
 The dataset is highly imbalanced, making failure detection more challenging than ordinary binary classification.
 
-### Selected Features
+## Features Used
+
+The following six features were selected:
 
 | Feature | Description |
 |---|---|
 | Type | Product quality variant (L, M, H) |
-| Air temperature [K] | Ambient air temperature |
-| Process temperature [K] | Machine process temperature |
-| Rotational speed [rpm] | Rotational speed |
-| Torque [Nm] | Applied torque |
-| Tool wear [min] | Accumulated tool wear |
+| Air temperature [K] | Air temperature |
+| Process temperature [K] | Process temperature |
+| Rotational speed [rpm] | Machine rotational speed |
+| Torque [Nm] | Machine torque |
+| Tool wear [min] | Tool usage duration |
 
-**Target:** `Machine failure`
-
-UDI and Product ID were removed because they are identifiers. The failure-mode indicators (TWF, HDF, PWF, OSF and RNF) were excluded to avoid target leakage.
+`UDI` and `Product ID` were excluded as identifiers. The failure-mode indicators (`TWF`, `HDF`, `PWF`, `OSF`, `RNF`) were excluded to avoid target leakage.
 
 ## Machine Learning Workflow
 
 ### 1. Exploratory Data Analysis
 
-- Dataset structure and statistical analysis
-- Missing-value and duplicate checks
+- Dataset inspection and statistical analysis
 - Target class distribution analysis
 - Numerical feature distributions
-- Outlier investigation using boxplots
-- Correlation and feature exploration
-
-Genuine observations were retained rather than automatically removing outliers.
+- Boxplots and outlier inspection
+- Understanding class imbalance
 
 ### 2. Data Preprocessing
 
-- Train-test split with stratification
-- Numerical feature scaling using StandardScaler
-- Categorical encoding using OneHotEncoder
-- ColumnTransformer for preprocessing
-- Pipeline-based model training to prevent preprocessing leakage
+- Selected relevant input features
+- Train-test split (70:30)
+- Stratified sampling to preserve class distribution
+- StandardScaler for numerical features
+- OneHotEncoder for categorical features
+- ColumnTransformer and Pipeline for preprocessing
 
 ### 3. Model Comparison
 
-The following algorithms were evaluated:
+The following algorithms were implemented and evaluated:
 
-- Logistic Regression
-- Decision Tree
-- Random Forest
-- K-Nearest Neighbors (KNN)
-- Support Vector Machine (SVM)
-- XGBoost
-
-Since the dataset is highly imbalanced, model performance was evaluated using precision, recall, F1-score and confusion matrices rather than accuracy alone.
+1. Logistic Regression
+2. Decision Tree
+3. Random Forest
+4. K-Nearest Neighbors
+5. Support Vector Machine
+6. XGBoost
 
 ### 4. Handling Class Imbalance
 
-The following approaches were explored:
+Because only 3.39% of records represent machine failures, accuracy alone is not a reliable evaluation metric.
+
+Different approaches were explored:
 
 - Class weighting
 - SMOTE
 - XGBoost `scale_pos_weight`
 
-The experiments demonstrated the trade-off between precision and recall when detecting minority-class failures.
-
 ### 5. Hyperparameter Tuning
 
-RandomizedSearchCV with StratifiedKFold cross-validation was used to tune the XGBoost model.
+RandomizedSearchCV with 5-fold Stratified Cross-Validation was used to tune XGBoost.
 
-The search optimized parameters such as:
+The search optimized the F1-score.
 
-- Learning rate
-- Maximum tree depth
-- Number of estimators
-- Subsample
-- Column sampling
-- Gamma
-- Minimum child weight
-- Positive class weight
+### 6. Decision Threshold Optimization
 
-### 6. Threshold Optimization
+Instead of relying only on the default classification threshold of 0.5, out-of-fold training predictions were used to select a threshold that maximized the F1-score.
 
-Instead of relying on the default classification threshold of 0.5, an optimized threshold was selected using out-of-fold training predictions and the precision-recall curve.
+Selected threshold: **0.64506**
 
-This allowed the classification decision to better balance precision and recall.
-
-### 7. Model Explainability
+### 7. Model Explainability Using SHAP
 
 SHAP (SHapley Additive exPlanations) was used to understand model predictions.
 
-Both global and local explanations were explored.
+- Global feature importance
+- Local prediction explanations
+- Feature contributions to model output
 
-The analysis highlighted features such as:
+Tool wear, torque, and rotational speed were among the most influential features.
 
-- Tool wear
-- Torque
-- Rotational speed
-- Air temperature
-- Process temperature
-
-These represent learned model associations, not proven causal relationships.
+These explanations describe learned model associations, not causal relationships.
 
 ## Model Performance
 
-The tuned XGBoost model with the optimized classification threshold achieved the following results in the recorded test evaluation:
+The final tuned XGBoost model, using the optimized decision threshold, achieved the following results on the test set:
 
 | Metric | Score |
 |---|---:|
 | Accuracy | 98% |
-| Precision (Failure class) | 0.80 |
-| Recall (Failure class) | 0.67 |
-| F1-score (Failure class) | 0.73 |
+| Precision | 0.80 |
+| Recall | 0.67 |
+| F1-Score | 0.73 |
 
-**Confusion Matrix**
+### Confusion Matrix
 
 Using the standard scikit-learn convention:
 
@@ -140,41 +123,28 @@ Using the standard scikit-learn convention:
 | Actual No Failure | 2881 | 17 |
 | Actual Failure | 34 | 68 |
 
-The model detected 68 out of 102 failure cases in this evaluation.
+The model correctly identified 68 out of 102 machine failure cases in the test set.
 
-**Important validation note:** The test set was consulted during multiple model comparison and experimentation stages. Therefore, these results should be treated as exploratory rather than an untouched, independent estimate of generalization performance.
+**Important validation limitation:** The test set was consulted repeatedly during model experimentation and threshold evaluation. Therefore, it is not an untouched independent holdout, and these results should not be interpreted as an unbiased estimate of real-world generalization.
 
 ## Streamlit Application
 
-The trained XGBoost pipeline and optimized threshold were saved and integrated into a Streamlit application.
+The trained model is integrated into a Streamlit application.
 
-The application allows users to:
+Application features:
 
-- Enter machine operating parameters
-- Select machine type
-- Generate failure predictions
-- View estimated failure probability
-- View the classification result
-- Inspect model diagnostics and input parameters
+- Input machine operating parameters
+- Predict machine failure
+- Display estimated failure score
+- Apply the optimized classification threshold
+- Display prediction results
 
-## Tech Stack
-
-| Category | Technologies |
-|---|---|
-| Language | Python |
-| Data manipulation | Pandas, NumPy |
-| Visualization | Matplotlib, Seaborn |
-| Machine Learning | Scikit-learn, XGBoost |
-| Imbalance handling | Imbalanced-learn |
-| Explainability | SHAP |
-| Deployment | Streamlit |
-| Model serialization | Joblib |
-| Development | Jupyter Notebook, VS Code |
+The saved preprocessing pipeline allows the application to accept raw input features directly.
 
 ## Project Structure
 
 ```text
-Industrial-Predictive-Maintenance/
+industrial-predictive-maintenance/
 │
 ├── app/
 │   └── app.py
@@ -190,38 +160,51 @@ Industrial-Predictive-Maintenance/
 │   └── predictive_maintenance.ipynb
 │
 ├── .gitignore
-├── requirements.txt
-└── README.md
+├── README.md
+└── requirements.txt
 ```
 
-## Installation and Setup
+## Installation and Usage
 
 ### 1. Clone the repository
 
 ```bash
-git clone YOUR_REPOSITORY_URL
-cd Industrial-Predictive-Maintenance
+git clone https://github.com/devansh29-12/industrial-predictive-maintenance.git
 ```
 
-### 2. Create a virtual environment
+### 2. Navigate to the project directory
+
+```bash
+cd industrial-predictive-maintenance
+```
+
+### 3. Create a virtual environment
 
 ```bash
 python -m venv .venv
 ```
 
-Activate it on Windows:
+### 4. Activate the environment
 
-```bash
+Windows:
+
+```powershell
 .venv\Scripts\activate
 ```
 
-### 3. Install dependencies
+Linux / macOS:
+
+```bash
+source .venv/bin/activate
+```
+
+### 5. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Run the application
+### 6. Run the Streamlit application
 
 ```bash
 streamlit run app/app.py
@@ -229,26 +212,23 @@ streamlit run app/app.py
 
 The application will open in your browser.
 
+## Technologies Used
+
+- Python
+- NumPy
+- Pandas
+- Matplotlib
+- Seaborn
+- Scikit-learn
+- XGBoost
+- SHAP
+- Joblib
+- Streamlit
+- Jupyter Notebook
+
 ## Limitations
 
-- The AI4I 2020 dataset is a synthetic benchmark dataset, not live industrial sensor data.
-- Model predictions are based on patterns learned from this dataset.
-- Estimated probabilities have not been independently validated for calibration.
-- The test set was reused during experimentation, so an additional untouched evaluation is needed for a stronger generalization claim.
-- The application is an ML prototype, not a certified industrial safety or maintenance system.
-
-## Future Improvements
-
-- Evaluate the model on an independent dataset.
-- Investigate probability calibration.
-- Add real-time sensor data integration.
-- Implement model monitoring and prediction logging.
-- Explore drift detection.
-
-## Author
-
-Developed as an end-to-end Machine Learning portfolio project to explore predictive maintenance, imbalanced classification, model optimization, explainable AI and deployment.
-
----
-
-**Disclaimer:** This project is intended for educational and demonstration purposes. Predictions should not be used as the sole basis for industrial maintenance or safety decisions.
+- The dataset is a synthetic benchmark dataset and may not represent all real industrial environments.
+- The dataset has significant class imbalance.
+- Test-set reuse during experimentation limits the reliability of the final performance estimate.
+- Predicted scores
